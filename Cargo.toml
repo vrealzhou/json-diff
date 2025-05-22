@@ -1,0 +1,27 @@
+[workspace]
+members = [
+    "json-diff-core",
+    "json-diff-cli"
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["JSON Diff Team"]
+license = "MIT"
+
+[package]
+name = "json-diff"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "A tool for comparing and identifying differences between JSON files or objects"
+
+[dependencies]
+json-diff-core = { path = "json-diff-core" }
+json-diff-cli = { path = "json-diff-cli" }
+clap = { version = "4.3", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.3"
