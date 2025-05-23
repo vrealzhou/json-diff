@@ -9,7 +9,7 @@ A tool for comparing and identifying differences between JSON files or objects.
 
 ## Modules
 1. json compare module: compares json and returns diff result in to a file
-2. diff display module: displays diff result file in terminal buffers
+2. diff display module: displays diff result in an interactive terminal UI with vim-like keybindings
 
 ## Documentation
 - [Diff Format Specification](docs/diff_format.md): Details about the text-based diff format
@@ -20,9 +20,53 @@ A tool for comparing and identifying differences between JSON files or objects.
 ```bash
 cargo install --path .
 ```
-2. Run the tool
+
+2. Run the tool in text mode (outputs to console or file)
 ```bash
+# Basic comparison
+json-diff <file1> <file2>
+
+# With a profile for customizing comparison
 json-diff --profile rules.toml <file1> <file2>
+
+# Output to a file
+json-diff --output diff.txt <file1> <file2>
 ```
-3. Use vim keybindings to navigate between diffs
-4. Use `:q` to quit
+
+3. Run the tool in interactive mode
+```bash
+json-diff --interactive <file1> <file2>
+```
+
+4. Interactive Mode Controls (Keyboard Only)
+   - `j` or Down Arrow: Move to next diff
+   - `k` or Up Arrow: Move to previous diff
+   - `h` or `?`: Toggle help screen
+   - `q` or Esc: Quit
+
+   Note: The interactive mode is designed for keyboard-only operation and does not support mouse interactions.
+
+## Testing
+
+### Running Tests
+```bash
+# Run all tests
+cargo test
+
+# Run interactive TUI tests
+./tests/test_ratatui.sh
+```
+
+### Test Examples
+```bash
+# Basic comparison with test files
+cargo run -- tests/fixtures/sample1.json tests/fixtures/sample2.json
+
+# Interactive mode with test files
+cargo run -- tests/fixtures/sample1.json tests/fixtures/sample2.json --interactive
+
+# With profile configuration
+cargo run -- tests/fixtures/sample1.json tests/fixtures/sample2.json --profile tests/fixtures/profile.toml --interactive
+```
+
+See [tests/README.md](tests/README.md) for detailed information about test files and fixtures.

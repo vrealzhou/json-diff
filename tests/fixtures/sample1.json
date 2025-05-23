@@ -1,0 +1,41 @@
+{
+  "user": {
+    "id": 12345,
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "profile": {
+      "age": 30,
+      "location": "New York",
+      "preferences": {
+        "theme": "dark",
+        "notifications": true,
+        "language": "en"
+      }
+    },
+    "roles": ["user", "admin"],
+    "projects": [
+      {
+        "id": 1,
+        "name": "Project Alpha",
+        "status": "active",
+        "team": ["Alice", "Bob", "Charlie"]
+      },
+      {
+        "id": 2,
+        "name": "Project Beta",
+        "status": "completed",
+        "team": ["David", "Eve"]
+      }
+    ],
+    "settings": {
+      "privacy": "public",
+      "twoFactorAuth": false,
+      "lastLogin": "2023-12-01T10:30:00Z"
+    }
+  },
+  "metadata": {
+    "version": "1.0",
+    "created": "2023-01-15T08:00:00Z",
+    "updated": "2023-12-01T10:30:00Z"
+  }
+}

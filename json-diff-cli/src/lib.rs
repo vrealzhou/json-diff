@@ -6,6 +6,7 @@ use anyhow::{Result, Context};
 use clap::Parser;
 use serde::Deserialize;
 use json_diff_core::{compare_files, CompareOptions, JsonDiffError, JsonPath};
+use json_diff_display;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -23,6 +24,10 @@ pub struct Args {
     /// Output file for diff result (stdout if not specified)
     #[arg(short, long)]
     pub output: Option<PathBuf>,
+
+    /// Display diff result in interactive terminal UI
+    #[arg(short, long)]
+    pub interactive: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -52,14 +57,20 @@ pub fn run(args: Args) -> Result<()> {
     let result = compare_files(&args.file1, &args.file2, &options)
         .context("Failed to compare JSON files")?;
 
-    // Output the result
-    let diff_text = result.to_string();
-
-    if let Some(output_path) = args.output {
-        fs::write(&output_path, diff_text)
-            .context("Failed to write diff result to file")?;
+    if args.interactive {
+        // Use the interactive display module
+        json_diff_display::run_display(result)
+            .context("Failed to run interactive display")?;
     } else {
-        println!("{}", diff_text);
+        // Output the result as text
+        let diff_text = result.to_string();
+
+        if let Some(output_path) = args.output {
+            fs::write(&output_path, diff_text)
+                .context("Failed to write diff result to file")?;
+        } else {
+            println!("{}", diff_text);
+        }
     }
 
     Ok(())

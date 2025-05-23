@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "json-diff-core",
-    "json-diff-cli"
+    "json-diff-cli",
+    "json-diff-display"
 ]
 
 [workspace.package]
@@ -21,6 +22,7 @@ description = "A tool for comparing and identifying differences between JSON fil
 [dependencies]
 json-diff-core = { path = "json-diff-core" }
 json-diff-cli = { path = "json-diff-cli" }
+json-diff-display = { path = "json-diff-display" }
 clap = { version = "4.3", features = ["derive"] }
 
 [dev-dependencies]

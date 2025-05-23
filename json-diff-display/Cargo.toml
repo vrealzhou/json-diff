@@ -1,0 +1,13 @@
+[package]
+name = "json-diff-display"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Terminal-based display for JSON diff results"
+
+[dependencies]
+json-diff-core = { path = "../json-diff-core" }
+ratatui = "0.24"
+crossterm = "0.27"
+anyhow = "1.0"

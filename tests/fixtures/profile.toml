@@ -1,0 +1,12 @@
+# Profile for JSON diff comparison
+# Ignore timestamp fields that change frequently
+ignore = ["$.metadata.updated", "$.user.settings.lastLogin"]
+
+# Treat these arrays as unordered (order doesn't matter)
+unordered = ["$.user.roles", "$.user.projects"]
+
+# Show nested differences in unordered arrays
+show_nested_differences = true
+
+# Identify specific array item changes
+identify_array_item_changes = true

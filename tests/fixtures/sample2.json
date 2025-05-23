@@ -1,0 +1,49 @@
+{
+  "user": {
+    "id": 12345,
+    "name": "John Smith",
+    "email": "john.smith@example.com",
+    "profile": {
+      "age": 31,
+      "location": "San Francisco",
+      "preferences": {
+        "theme": "light",
+        "notifications": true,
+        "language": "en",
+        "timezone": "PST"
+      }
+    },
+    "roles": ["user", "admin", "moderator"],
+    "projects": [
+      {
+        "id": 2,
+        "name": "Project Beta",
+        "status": "completed",
+        "team": ["David", "Eve"]
+      },
+      {
+        "id": 1,
+        "name": "Project Alpha",
+        "status": "on-hold",
+        "team": ["Alice", "Bob", "Charlie", "Frank"]
+      },
+      {
+        "id": 3,
+        "name": "Project Gamma",
+        "status": "planning",
+        "team": ["Grace", "Henry"]
+      }
+    ],
+    "settings": {
+      "privacy": "private",
+      "twoFactorAuth": true,
+      "lastLogin": "2023-12-15T14:45:00Z",
+      "sessionTimeout": 3600
+    }
+  },
+  "metadata": {
+    "version": "1.1",
+    "created": "2023-01-15T08:00:00Z",
+    "updated": "2023-12-15T14:45:00Z"
+  }
+}

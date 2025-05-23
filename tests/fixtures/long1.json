@@ -1,0 +1,14 @@
+{
+  "data": {
+    "very_long_field_name_that_will_definitely_cause_wrapping_issues": "This is a very long string value that contains a lot of text and will definitely cause line wrapping issues in the terminal display if not handled properly by the text wrapping algorithm",
+    "another_field": {
+      "nested_very_long_field_name_with_lots_of_characters": "Another extremely long string value that should demonstrate how the text wrapping works with nested JSON objects and very long field names and values",
+      "array_with_long_values": [
+        "This is the first very long array element that contains a lot of text and should wrap properly",
+        "This is the second very long array element with even more text to demonstrate proper wrapping behavior",
+        "Short element",
+        "This is the fourth very long array element that has been designed specifically to test the text wrapping functionality of the JSON diff display module"
+      ]
+    }
+  }
+}

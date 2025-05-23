@@ -8,6 +8,7 @@ description = "Command-line interface for JSON comparison and diff generation"
 
 [dependencies]
 json-diff-core = { path = "../json-diff-core" }
+json-diff-display = { path = "../json-diff-display" }
 anyhow = "1.0"
 clap = { version = "4.3", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
