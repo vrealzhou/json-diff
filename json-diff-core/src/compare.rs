@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::fs::File;
 use std::io::Read;
+use std::collections::HashMap;
 use chrono::Utc;
 use serde_json::{Value, Map};
 
@@ -50,7 +51,11 @@ pub fn compare_files<P: AsRef<Path>>(
     let left_json: Value = serde_json::from_str(&left_content)?;
     let right_json: Value = serde_json::from_str(&right_content)?;
 
-    let mut result = compare_json(&left_json, &right_json, options)?;
+    // Build line number mappings
+    let left_line_map = build_line_number_map(&left_content, &left_json);
+    let right_line_map = build_line_number_map(&right_content, &right_json);
+
+    let mut result = compare_json_with_lines(&left_json, &right_json, options, &left_line_map, &right_line_map)?;
     result.left_file = Some(left_path.as_ref().to_path_buf());
     result.right_file = Some(right_path.as_ref().to_path_buf());
 
@@ -63,9 +68,21 @@ pub fn compare_json(
     right: &Value,
     options: &CompareOptions
 ) -> Result<DiffResult, JsonDiffError> {
+    let empty_map = HashMap::new();
+    compare_json_with_lines(left, right, options, &empty_map, &empty_map)
+}
+
+/// Compare two JSON values with line number information
+pub fn compare_json_with_lines(
+    left: &Value,
+    right: &Value,
+    options: &CompareOptions,
+    left_line_map: &HashMap<String, usize>,
+    right_line_map: &HashMap<String, usize>,
+) -> Result<DiffResult, JsonDiffError> {
     let mut entries = Vec::new();
 
-    compare_values(left, right, "$", &mut entries, options)?;
+    compare_values_with_lines(left, right, "$", &mut entries, options, left_line_map, right_line_map)?;
 
     let result = DiffResult {
         left_file: None,
@@ -77,12 +94,128 @@ pub fn compare_json(
     Ok(result)
 }
 
-fn compare_values(
+/// Build a mapping from JSON paths to line numbers
+fn build_line_number_map(content: &str, json: &Value) -> HashMap<String, usize> {
+    let mut line_map = HashMap::new();
+
+    // Build a mapping by parsing the JSON structure and tracking line numbers
+    build_path_line_mapping(json, "$", content, &mut line_map);
+
+    line_map
+}
+
+/// Recursively build path to line number mapping
+fn build_path_line_mapping(
+    value: &Value,
+    current_path: &str,
+    content: &str,
+    line_map: &mut HashMap<String, usize>,
+) {
+    match value {
+        Value::Object(obj) => {
+            for (key, val) in obj {
+                let field_path = if current_path == "$" {
+                    format!("$.{}", key)
+                } else {
+                    format!("{}.{}", current_path, key)
+                };
+
+                // Find the line number for this field
+                if let Some(line_num) = find_field_line_number(content, key) {
+                    line_map.insert(field_path.clone(), line_num);
+                }
+
+                // Recursively process nested values
+                build_path_line_mapping(val, &field_path, content, line_map);
+            }
+        }
+        Value::Array(arr) => {
+            for (index, val) in arr.iter().enumerate() {
+                let array_path = format!("{}[{}]", current_path, index);
+
+                // For arrays, we'll use the line number of the parent field
+                // A more sophisticated approach would track the exact array element line
+                if let Some(parent_line) = line_map.get(current_path) {
+                    line_map.insert(array_path.clone(), *parent_line);
+                }
+
+                // Recursively process array elements
+                build_path_line_mapping(val, &array_path, content, line_map);
+            }
+        }
+        _ => {
+            // For primitive values, the line number is already set by the parent object
+        }
+    }
+}
+
+/// Find the line number where a specific field is defined
+fn find_field_line_number(content: &str, field_name: &str) -> Option<usize> {
+    let mut found_lines = Vec::new();
+
+    for (line_num, line) in content.lines().enumerate() {
+        let line_num = line_num + 1; // 1-based line numbers
+
+        // Look for the field name as a quoted string followed by a colon
+        let pattern = format!("\"{}\"", field_name);
+        if let Some(start) = line.find(&pattern) {
+            // Check if this is followed by a colon (with possible whitespace)
+            let after_quote = start + pattern.len();
+            if line[after_quote..].trim_start().starts_with(':') {
+                found_lines.push(line_num);
+            }
+        }
+    }
+
+    // Return the first occurrence for now
+    // A more sophisticated approach would track context to find the right occurrence
+    found_lines.first().copied()
+}
+
+/// Find line number for a given path, with fallback strategies
+fn find_line_for_path(path: &str, line_map: &HashMap<String, usize>) -> Option<usize> {
+    // Try exact match first
+    if let Some(line) = line_map.get(path) {
+        return Some(*line);
+    }
+
+    // Try to find a parent path that exists
+    // For example, if looking for "$.user.profile.age" and it doesn't exist,
+    // try "$.user.profile", then "$.user"
+    let mut current_path = path.to_string();
+    while let Some(last_dot) = current_path.rfind('.') {
+        current_path = current_path[..last_dot].to_string();
+        if let Some(line) = line_map.get(&current_path) {
+            return Some(*line);
+        }
+    }
+
+    // Try to find by field name only (last component of the path)
+    if let Some(field_name) = path.split('.').last() {
+        // Remove array indices if present
+        let clean_field = field_name.split('[').next().unwrap_or(field_name);
+
+        // Look for any path ending with this field name
+        for (map_path, line) in line_map {
+            if map_path.ends_with(&format!(".{}", clean_field)) || map_path == &format!("$.{}", clean_field) {
+                return Some(*line);
+            }
+        }
+    }
+
+    None
+}
+
+
+
+fn compare_values_with_lines(
     left: &Value,
     right: &Value,
     path: &str,
     entries: &mut Vec<DiffEntry>,
     options: &CompareOptions,
+    left_line_map: &HashMap<String, usize>,
+    right_line_map: &HashMap<String, usize>,
 ) -> Result<(), JsonDiffError> {
     // Check if this path should be ignored
     if options.ignore_paths.iter().any(|p| p.matches(path)) {
@@ -91,29 +224,36 @@ fn compare_values(
             path: path.to_string(),
             old_value: None,
             new_value: None,
+            left_line: find_line_for_path(path, left_line_map),
+            right_line: find_line_for_path(path, right_line_map),
         });
         return Ok(());
     }
 
     match (left, right) {
         (Value::Object(left_obj), Value::Object(right_obj)) => {
-            compare_objects(left_obj, right_obj, path, entries, options)?;
+            compare_objects_with_lines(left_obj, right_obj, path, entries, options, left_line_map, right_line_map)?;
         }
         (Value::Array(left_arr), Value::Array(right_arr)) => {
             // Check if this array should be compared without order
             let unordered = options.unordered_arrays.iter().any(|p| p.matches(path));
-            compare_arrays(left_arr, right_arr, path, entries, options, unordered)?;
+            compare_arrays_with_lines(left_arr, right_arr, path, entries, options, unordered, left_line_map, right_line_map)?;
         }
         _ if left == right => {
             // Values are equal, no diff needed
         }
         _ => {
             // Values are different
+            let left_line = find_line_for_path(path, left_line_map);
+            let right_line = find_line_for_path(path, right_line_map);
+
             entries.push(DiffEntry {
                 diff_type: DiffType::Modified,
                 path: path.to_string(),
                 old_value: Some(left.clone()),
                 new_value: Some(right.clone()),
+                left_line,
+                right_line,
             });
         }
     }
@@ -121,12 +261,16 @@ fn compare_values(
     Ok(())
 }
 
-fn compare_objects(
+
+
+fn compare_objects_with_lines(
     left: &Map<String, Value>,
     right: &Map<String, Value>,
     path: &str,
     entries: &mut Vec<DiffEntry>,
     options: &CompareOptions,
+    left_line_map: &HashMap<String, usize>,
+    right_line_map: &HashMap<String, usize>,
 ) -> Result<(), JsonDiffError> {
     // Find keys that exist in left but not in right
     for key in left.keys() {
@@ -137,18 +281,22 @@ fn compare_objects(
             if options.ignore_paths.iter().any(|p| p.matches(&key_path)) {
                 entries.push(DiffEntry {
                     diff_type: DiffType::Ignored,
-                    path: key_path,
+                    path: key_path.clone(),
                     old_value: None,
                     new_value: None,
+                    left_line: find_line_for_path(&key_path, left_line_map),
+                    right_line: find_line_for_path(&key_path, right_line_map),
                 });
                 continue;
             }
 
             entries.push(DiffEntry {
                 diff_type: DiffType::Removed,
-                path: key_path,
+                path: key_path.clone(),
                 old_value: Some(left[key].clone()),
                 new_value: None,
+                left_line: find_line_for_path(&key_path, left_line_map),
+                right_line: find_line_for_path(&key_path, right_line_map),
             });
         }
     }
@@ -161,9 +309,11 @@ fn compare_objects(
         if options.ignore_paths.iter().any(|p| p.matches(&key_path)) {
             entries.push(DiffEntry {
                 diff_type: DiffType::Ignored,
-                path: key_path,
+                path: key_path.clone(),
                 old_value: None,
                 new_value: None,
+                left_line: find_line_for_path(&key_path, left_line_map),
+                right_line: find_line_for_path(&key_path, right_line_map),
             });
             continue;
         }
@@ -171,25 +321,31 @@ fn compare_objects(
         if !left.contains_key(key) {
             entries.push(DiffEntry {
                 diff_type: DiffType::Added,
-                path: key_path,
+                path: key_path.clone(),
                 old_value: None,
                 new_value: Some(right[key].clone()),
+                left_line: find_line_for_path(&key_path, left_line_map),
+                right_line: find_line_for_path(&key_path, right_line_map),
             });
         } else {
-            compare_values(&left[key], &right[key], &key_path, entries, options)?;
+            compare_values_with_lines(&left[key], &right[key], &key_path, entries, options, left_line_map, right_line_map)?;
         }
     }
 
     Ok(())
 }
 
-fn compare_arrays(
+
+
+fn compare_arrays_with_lines(
     left: &[Value],
     right: &[Value],
     path: &str,
     entries: &mut Vec<DiffEntry>,
     options: &CompareOptions,
     unordered: bool,
+    left_line_map: &HashMap<String, usize>,
+    right_line_map: &HashMap<String, usize>,
 ) -> Result<(), JsonDiffError> {
     if unordered {
         // For unordered comparison, we check if the arrays have the same elements
@@ -202,6 +358,8 @@ fn compare_arrays(
                 path: path.to_string(),
                 old_value: None,
                 new_value: None,
+                left_line: find_line_for_path(path, left_line_map),
+                right_line: find_line_for_path(path, right_line_map),
             });
 
             // If show_nested_differences is enabled, we also want to show the specific differences
@@ -246,16 +404,18 @@ fn compare_arrays(
                         if left_item != right_item {
                             // Items are matched but different, compare their contents
                             let item_path = format!("{}[{}]", path, i);
-                            compare_values(left_item, right_item, &item_path, entries, options)?;
+                            compare_values_with_lines(left_item, right_item, &item_path, entries, options, left_line_map, right_line_map)?;
                         }
                     } else {
                         // Item in left not found in right
                         let item_path = format!("{}[{}]", path, i);
                         entries.push(DiffEntry {
                             diff_type: DiffType::Removed,
-                            path: item_path,
+                            path: item_path.clone(),
                             old_value: Some(left_item.clone()),
                             new_value: None,
+                            left_line: find_line_for_path(&item_path, left_line_map),
+                            right_line: find_line_for_path(&item_path, right_line_map),
                         });
                     }
                 }
@@ -271,9 +431,11 @@ fn compare_arrays(
                         let item_path = format!("{}[{}]", path, j);
                         entries.push(DiffEntry {
                             diff_type: DiffType::Added,
-                            path: item_path,
+                            path: item_path.clone(),
                             old_value: None,
                             new_value: Some(right_item.clone()),
+                            left_line: find_line_for_path(&item_path, left_line_map),
+                            right_line: find_line_for_path(&item_path, right_line_map),
                         });
                     }
                 }
@@ -287,7 +449,7 @@ fn compare_arrays(
 
             for i in 0..min_len {
                 let item_path = format!("{}[{}]", path, i);
-                compare_values(&left[i], &right[i], &item_path, entries, options)?;
+                compare_values_with_lines(&left[i], &right[i], &item_path, entries, options, left_line_map, right_line_map)?;
             }
 
             // Handle extra elements in left
@@ -295,9 +457,11 @@ fn compare_arrays(
                 let item_path = format!("{}[{}]", path, i);
                 entries.push(DiffEntry {
                     diff_type: DiffType::Removed,
-                    path: item_path,
+                    path: item_path.clone(),
                     old_value: Some(left[i].clone()),
                     new_value: None,
+                    left_line: find_line_for_path(&item_path, left_line_map),
+                    right_line: find_line_for_path(&item_path, right_line_map),
                 });
             }
 
@@ -306,9 +470,11 @@ fn compare_arrays(
                 let item_path = format!("{}[{}]", path, i);
                 entries.push(DiffEntry {
                     diff_type: DiffType::Added,
-                    path: item_path,
+                    path: item_path.clone(),
                     old_value: None,
                     new_value: Some(right[i].clone()),
+                    left_line: find_line_for_path(&item_path, left_line_map),
+                    right_line: find_line_for_path(&item_path, right_line_map),
                 });
             }
         } else {
@@ -319,6 +485,8 @@ fn compare_arrays(
                     path: path.to_string(),
                     old_value: Some(Value::Array(left.to_vec())),
                     new_value: Some(Value::Array(right.to_vec())),
+                    left_line: find_line_for_path(path, left_line_map),
+                    right_line: find_line_for_path(path, right_line_map),
                 });
             }
         }

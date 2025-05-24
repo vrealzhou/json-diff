@@ -4,8 +4,9 @@ A tool for comparing and identifying differences between JSON files or objects.
 
 ## Features
 1. Compare json and display diffs in terminal buffers. It supports vim keybindings for navigation.
-2. It can specify json path in regex format to ignore certain fields.
-3. It can compare certain array fields without order by specify json path in regex format.
+2. **Line Number Tracking**: Shows source and target file line numbers for easy content location in original files.
+3. It can specify json path in regex format to ignore certain fields.
+4. It can compare certain array fields without order by specify json path in regex format.
 
 ## Modules
 1. json compare module: compares json and returns diff result in to a file
@@ -68,5 +69,14 @@ cargo run -- tests/fixtures/sample1.json tests/fixtures/sample2.json --interacti
 # With profile configuration
 cargo run -- tests/fixtures/sample1.json tests/fixtures/sample2.json --profile tests/fixtures/profile.toml --interactive
 ```
+
+### Example Output with Line Numbers
+```
+~ $.user.email (L5:L5): "john.doe@example.com" -> "john.smith@example.com"
+~ $.metadata.version (L37:L45): "1.0" -> "1.1"
++ $.user.profile.preferences.timezone (L9:L13): "PST"
+```
+
+The format `(L5:L5)` shows line 5 in both source and target files, while `(L37:L45)` shows line 37 in the source file and line 45 in the target file.
 
 See [tests/README.md](tests/README.md) for detailed information about test files and fixtures.

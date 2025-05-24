@@ -49,7 +49,7 @@ fn test_cli_basic_comparison() {
     );
 
     assert!(output.contains("DIFF-JSON v1"));
-    assert!(output.contains("~ $.name: \"John\" -> \"Jane\""));
+    assert!(output.contains("~ $.name (L1:L1): \"John\" -> \"Jane\""));
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn test_cli_with_profile() {
     );
 
     assert!(output.contains("DIFF-JSON v1"));
-    assert!(output.contains("? $.timestamp: [IGNORED]"));
+    assert!(output.contains("? $.timestamp (L1:L1): [IGNORED]"));
     assert!(!output.contains("~ $.timestamp"));
 }
 
@@ -108,9 +108,9 @@ fn test_cli_nested_objects() {
     );
 
     assert!(output.contains("DIFF-JSON v1"));
-    assert!(output.contains("~ $.user.contact.email: \"john@example.com\" -> \"john.doe@example.com\""));
-    assert!(output.contains("~ $.user.contact.address.city: \"New York\" -> \"Boston\""));
-    assert!(output.contains("~ $.user.preferences.theme: \"dark\" -> \"light\""));
+    assert!(output.contains("~ $.user.contact.email (L5:L5): \"john@example.com\" -> \"john.doe@example.com\""));
+    assert!(output.contains("~ $.user.contact.address.city (L9:L9): \"New York\" -> \"Boston\""));
+    assert!(output.contains("~ $.user.preferences.theme (L14:L14): \"dark\" -> \"light\""));
 }
 
 #[test]
@@ -134,10 +134,10 @@ fn test_cli_array_objects() {
     );
 
     assert!(output.contains("DIFF-JSON v1"));
-    assert!(output.contains("~ $.products[0].price: 10.99 -> 12.99"));
-    assert!(output.contains("~ $.products[2].id: 3 -> 4"));
-    assert!(output.contains("~ $.products[2].name: \"Product C\" -> \"Product D\""));
-    assert!(output.contains("~ $.products[2].price: 5.99 -> 7.99"));
+    assert!(output.contains("~ $.products[0].price (L3:L3): 10.99 -> 12.99"));
+    assert!(output.contains("~ $.products[2].id (L3:L3): 3 -> 4"));
+    assert!(output.contains("~ $.products[2].name (L3:L3): \"Product C\" -> \"Product D\""));
+    assert!(output.contains("~ $.products[2].price (L3:L3): 5.99 -> 7.99"));
 }
 
 #[test]
@@ -155,8 +155,8 @@ fn test_cli_unordered_arrays() {
     );
 
     assert!(output.contains("DIFF-JSON v1"));
-    assert!(output.contains("* $.tags: [REORDERED]"));
-    assert!(output.contains("* $.scores: [REORDERED]"));
+    assert!(output.contains("* $.tags (L2:L2): [REORDERED]"));
+    assert!(output.contains("* $.scores (L3:L3): [REORDERED]"));
 }
 
 #[test]
@@ -211,7 +211,7 @@ show_nested_differences = true
     println!("Unordered arrays with nested differences output:\n{}", output);
 
     // Should show both the reordering and the nested differences
-    assert!(output.contains("* $.users: [REORDERED]"));
+    assert!(output.contains("* $.users (L2:L2): [REORDERED]"));
     assert!(output.contains("$.users") && output.contains("theme") && output.contains("light") && output.contains("dark"));
 }
 
@@ -377,7 +377,7 @@ unordered = [
 
     // When arrays are marked as unordered, the tool only reports the reordering
     // and doesn't report individual changes within the array elements
-    assert!(output.contains("* $.employees: [REORDERED]"));
+    assert!(output.contains("* $.employees (L2:L2): [REORDERED]"));
 
     // Let's run another test with the same data but without marking the arrays as unordered
     // to verify that the tool can detect the changes within the array elements
@@ -434,7 +434,7 @@ unordered = [
     );
 
     // Now check for the priority change in Robert's project
-    assert!(output_ordered.contains("~ $.employees[0].projects[0].details.priority: \"medium\" -> \"high\""));
+    assert!(output_ordered.contains("~ $.employees[0].projects[0].details.priority (L17:L17): \"medium\" -> \"high\""));
 }
 
 #[test]
@@ -536,7 +536,7 @@ unordered = [
     assert!(output.contains("DIFF-JSON v1"));
 
     // Check for reordering at different levels
-    assert!(output.contains("* $.catalog.categories: [REORDERED]"));
+    assert!(output.contains("* $.catalog.categories (L3:L3): [REORDERED]"));
 
     // Now let's test with a specific change to verify detection works when not using unordered arrays
     let output_with_change = run_json_diff(
@@ -580,7 +580,7 @@ unordered = [
     );
 
     // Verify price change is detected
-    assert!(output_with_change.contains("~ $.catalog.categories[0].products[0].variants[0].price: 999.99 -> 899.99"));
+    assert!(output_with_change.contains("~ $.catalog.categories[0].products[0].variants[0].price (L11:L11): 999.99 -> 899.99"));
 }
 
 #[test]
@@ -634,7 +634,7 @@ fn test_unordered_arrays_with_nested_differences() {
     println!("Unordered arrays with nested differences output:\n{}", output);
 
     // Check if the tool reports the array as reordered
-    assert!(output.contains("* $.users: [REORDERED]"));
+    assert!(output.contains("* $.users (L2:L2): [REORDERED]"));
 
     // Check if the tool also reports the nested field change
     // Note: This might fail if the tool doesn't report nested changes when arrays are unordered
@@ -690,10 +690,10 @@ fn test_unordered_arrays_with_nested_differences() {
     println!("Ordered arrays with nested differences output:\n{}", output_ordered);
 
     // When not marked as unordered, the tool should report all differences
-    assert!(output_ordered.contains("~ $.users[0].id: 1 -> 2"));
-    assert!(output_ordered.contains("~ $.users[0].name: \"Alice\" -> \"Bob\""));
-    assert!(output_ordered.contains("~ $.users[1].id: 2 -> 1"));
-    assert!(output_ordered.contains("~ $.users[1].name: \"Bob\" -> \"Alice\""));
+    assert!(output_ordered.contains("~ $.users[0].id (L4:L4): 1 -> 2"));
+    assert!(output_ordered.contains("~ $.users[0].name (L5:L5): \"Alice\" -> \"Bob\""));
+    assert!(output_ordered.contains("~ $.users[1].id (L4:L4): 2 -> 1"));
+    assert!(output_ordered.contains("~ $.users[1].name (L5:L5): \"Bob\" -> \"Alice\""));
 
     // Also check if it reports the theme change
     assert!(output_ordered.contains("~ $.users[0].settings.theme: \"dark\" -> \"dark\"") ||
@@ -729,18 +729,18 @@ fn test_partial_array_differences() {
     println!("Partial array differences output:\n{}", output);
 
     // The tool should report specific changes, not mark the whole array as different
-    assert!(output.contains("~ $.items[1].value: \"original\" -> \"modified\""));
+    assert!(output.contains("~ $.items[1].value (L3:L3): \"original\" -> \"modified\""));
 
     // Check if it reports the removed and added items correctly
-    let removed_reported = output.contains("- $.items[3].id: 4") ||
-                           output.contains("- $.items[3].value: \"to be removed\"") ||
-                           output.contains("~ $.items[3].id: 4 -> 6") ||
-                           output.contains("~ $.items[3].value: \"to be removed\" -> \"newly added\"");
+    let removed_reported = output.contains("- $.items[3].id") ||
+                           output.contains("- $.items[3].value") ||
+                           output.contains("~ $.items[3].id (L3:L3): 4 -> 6") ||
+                           output.contains("~ $.items[3].value (L3:L3): \"to be removed\" -> \"newly added\"");
 
-    let added_reported = output.contains("+ $.items[3].id: 6") ||
-                         output.contains("+ $.items[3].value: \"newly added\"") ||
-                         output.contains("~ $.items[3].id: 4 -> 6") ||
-                         output.contains("~ $.items[3].value: \"to be removed\" -> \"newly added\"");
+    let added_reported = output.contains("+ $.items[3].id") ||
+                         output.contains("+ $.items[3].value") ||
+                         output.contains("~ $.items[3].id (L3:L3): 4 -> 6") ||
+                         output.contains("~ $.items[3].value (L3:L3): \"to be removed\" -> \"newly added\"");
 
     assert!(removed_reported);
     assert!(added_reported);
@@ -850,12 +850,12 @@ fn test_complex_localization() {
     println!("Complex localization output:\n{}", output);
 
     // Check if the tool reports all the differences with clear paths
-    assert!(output.contains("~ $.app.version: \"1.0.0\" -> \"1.0.1\""));
-    assert!(output.contains("~ $.app.config.server.timeout: 30 -> 60"));
-    assert!(output.contains("~ $.app.config.database.credentials.password: \"secret\" -> \"updated-secret\""));
-    assert!(output.contains("~ $.app.config.features.caching: false -> true"));
-    assert!(output.contains("~ $.app.modules[0].settings.maxItems: 100 -> 200"));
-    assert!(output.contains("~ $.app.modules[1].enabled: false -> true"));
+    assert!(output.contains("~ $.app.version (L4:L4): \"1.0.0\" -> \"1.0.1\""));
+    assert!(output.contains("~ $.app.config.server.timeout (L9:L9): 30 -> 60"));
+    assert!(output.contains("~ $.app.config.database.credentials.password (L16:L16): \"secret\" -> \"updated-secret\""));
+    assert!(output.contains("~ $.app.config.features.caching (L21:L21): false -> true"));
+    assert!(output.contains("~ $.app.modules[0].settings.maxItems (L30:L30): 100 -> 200"));
+    assert!(output.contains("~ $.app.modules[1].enabled (L28:L28): false -> true"));
 
     // Unchanged values should not be reported
     assert!(!output.contains("$.app.name"));
@@ -909,19 +909,19 @@ fn test_cli_mixed_changes() {
 
     assert!(output.contains("DIFF-JSON v1"));
     // Metadata changes
-    assert!(output.contains("~ $.metadata.author: \"John Doe\" -> \"Jane Smith\""));
-    assert!(output.contains("~ $.metadata.version: 1 -> 2"));
-    assert!(output.contains("+ $.metadata.modified: \"2023-02-15\""));
+    assert!(output.contains("~ $.metadata.author (L5:L5): \"John Doe\" -> \"Jane Smith\""));
+    assert!(output.contains("~ $.metadata.version (L6:L6): 1 -> 2"));
+    assert!(output.contains("+ $.metadata.modified (L3:L7): \"2023-02-15\""));
 
     // Content changes
-    assert!(output.contains("~ $.content.title: \"Original Document\" -> \"Revised Document\""));
-    assert!(output.contains("~ $.content.sections[1].text: \"Main Content\" -> \"Updated Content\""));
-    assert!(output.contains("~ $.content.sections[2].id: \"s3\" -> \"s4\""));
-    assert!(output.contains("~ $.content.sections[2].text: \"Conclusion\" -> \"New Section\""));
-    assert!(output.contains("~ $.content.tags[0]: \"draft\" -> \"final\""));
-    assert!(output.contains("~ $.content.tags[1]: \"review\" -> \"published\""));
-    assert!(output.contains("+ $.content.summary: \"A brief summary of the document\""));
+    assert!(output.contains("~ $.content.title (L9:L10): \"Original Document\" -> \"Revised Document\""));
+    assert!(output.contains("~ $.content.sections[1].text (L11:L12): \"Main Content\" -> \"Updated Content\""));
+    assert!(output.contains("~ $.content.sections[2].id (L2:L2): \"s3\" -> \"s4\""));
+    assert!(output.contains("~ $.content.sections[2].text (L11:L12): \"Conclusion\" -> \"New Section\""));
+    assert!(output.contains("~ $.content.tags[0] (L15:L16): \"draft\" -> \"final\""));
+    assert!(output.contains("~ $.content.tags[1] (L15:L16): \"review\" -> \"published\""));
+    assert!(output.contains("+ $.content.summary (L8:L17): \"A brief summary of the document\""));
 
     // Status change
-    assert!(output.contains("~ $.status: \"draft\" -> \"published\""));
+    assert!(output.contains("~ $.status (L17:L19): \"draft\" -> \"published\""));
 }

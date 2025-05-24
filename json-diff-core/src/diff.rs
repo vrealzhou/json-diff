@@ -38,12 +38,27 @@ pub struct DiffEntry {
     pub old_value: Option<serde_json::Value>,
     /// New value (if applicable)
     pub new_value: Option<serde_json::Value>,
+    /// Line number in the left/source file (if applicable)
+    pub left_line: Option<usize>,
+    /// Line number in the right/target file (if applicable)
+    pub right_line: Option<usize>,
 }
 
 impl fmt::Display for DiffEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}: ", self.diff_type, self.path)?;
-        
+        // Write the diff type and path
+        write!(f, "{} {}", self.diff_type, self.path)?;
+
+        // Add line number information if available
+        match (self.left_line, self.right_line) {
+            (Some(left), Some(right)) => write!(f, " (L{}:L{})", left, right)?,
+            (Some(left), None) => write!(f, " (L{})", left)?,
+            (None, Some(right)) => write!(f, " (L{})", right)?,
+            (None, None) => {},
+        }
+
+        write!(f, ": ")?;
+
         match self.diff_type {
             DiffType::Added => {
                 write!(f, "{}", serde_json::to_string(&self.new_value).unwrap_or_default())
@@ -52,7 +67,7 @@ impl fmt::Display for DiffEntry {
                 write!(f, "{}", serde_json::to_string(&self.old_value).unwrap_or_default())
             }
             DiffType::Modified | DiffType::ArrayItemChanged => {
-                write!(f, "{} -> {}", 
+                write!(f, "{} -> {}",
                     serde_json::to_string(&self.old_value).unwrap_or_default(),
                     serde_json::to_string(&self.new_value).unwrap_or_default()
                 )
@@ -83,22 +98,22 @@ pub struct DiffResult {
 impl fmt::Display for DiffResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "DIFF-JSON v1")?;
-        
+
         if let Some(left) = &self.left_file {
             writeln!(f, "LEFT: {}", left.display())?;
         }
-        
+
         if let Some(right) = &self.right_file {
             writeln!(f, "RIGHT: {}", right.display())?;
         }
-        
+
         writeln!(f, "TIMESTAMP: {}", self.timestamp.to_rfc3339())?;
         writeln!(f)?;
-        
+
         for entry in &self.entries {
             writeln!(f, "{}", entry)?;
         }
-        
+
         Ok(())
     }
 }
