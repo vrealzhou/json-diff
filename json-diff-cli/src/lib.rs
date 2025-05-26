@@ -5,7 +5,7 @@ use std::fs;
 use anyhow::{Result, Context};
 use clap::Parser;
 use serde::Deserialize;
-use json_diff_core::{compare_files, CompareOptions, JsonDiffError, JsonPath};
+use json_diff_core::{compare_files, CompareOptions, JsonDiffError, JsonPath, DiffResult};
 use json_diff_display;
 
 #[derive(Parser, Debug)]
@@ -28,6 +28,10 @@ pub struct Args {
     /// Display diff result in interactive terminal UI
     #[arg(short, long)]
     pub interactive: bool,
+
+    /// Use symbols instead of readable text for diff types
+    #[arg(short = 'S', long)]
+    pub symbols: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -58,12 +62,16 @@ pub fn run(args: Args) -> Result<()> {
         .context("Failed to compare JSON files")?;
 
     if args.interactive {
-        // Use the interactive display module
-        json_diff_display::run_display(result)
+        // Use the interactive display module (readable format is default, symbols if requested)
+        json_diff_display::run_display_with_options(result, !args.symbols)
             .context("Failed to run interactive display")?;
     } else {
-        // Output the result as text
-        let diff_text = result.to_string();
+        // Output the result as text (readable format is default, symbols if requested)
+        let diff_text = if args.symbols {
+            result.to_string()
+        } else {
+            format_diff_readable(&result)
+        };
 
         if let Some(output_path) = args.output {
             fs::write(&output_path, diff_text)
@@ -74,6 +82,28 @@ pub fn run(args: Args) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn format_diff_readable(result: &DiffResult) -> String {
+    let mut output = String::new();
+
+    output.push_str("DIFF-JSON v1\n");
+
+    if let Some(left) = &result.left_file {
+        output.push_str(&format!("LEFT: {}\n", left.display()));
+    }
+
+    if let Some(right) = &result.right_file {
+        output.push_str(&format!("RIGHT: {}\n", right.display()));
+    }
+
+    output.push_str(&format!("TIMESTAMP: {}\n\n", result.timestamp.to_rfc3339()));
+
+    for entry in &result.entries {
+        output.push_str(&format!("{}\n", entry.format_readable()));
+    }
+
+    output
 }
 
 fn load_profile(path: &PathBuf) -> Result<CompareOptions, JsonDiffError> {

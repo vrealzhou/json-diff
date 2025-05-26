@@ -27,6 +27,7 @@ pub struct App {
     current_index: usize,
     quit: bool,
     help_visible: bool,
+    use_readable_format: bool,
 }
 
 impl App {
@@ -36,6 +37,7 @@ impl App {
             current_index: 0,
             quit: false,
             help_visible: false,
+            use_readable_format: false,
         }
     }
 
@@ -58,10 +60,19 @@ impl App {
     pub fn toggle_help(&mut self) {
         self.help_visible = !self.help_visible;
     }
+
+    pub fn toggle_format(&mut self) {
+        self.use_readable_format = !self.use_readable_format;
+    }
 }
 
 /// Runs the terminal UI for displaying diff results
 pub fn run_display(diff_result: DiffResult) -> Result<()> {
+    run_display_with_options(diff_result, false)
+}
+
+/// Runs the terminal UI for displaying diff results with options
+pub fn run_display_with_options(diff_result: DiffResult, use_readable_format: bool) -> Result<()> {
     // Setup terminal
     enable_raw_mode().context("Failed to enable raw mode")?;
     let mut stdout = io::stdout();
@@ -71,6 +82,7 @@ pub fn run_display(diff_result: DiffResult) -> Result<()> {
 
     // Create app state
     let mut app = App::new(diff_result);
+    app.use_readable_format = use_readable_format;
 
     // Main loop
     let result = run_main_loop(&mut terminal, &mut app);
@@ -98,6 +110,7 @@ fn run_main_loop<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Resul
                 KeyCode::Char('j') | KeyCode::Down => app.next(),
                 KeyCode::Char('k') | KeyCode::Up => app.previous(),
                 KeyCode::Char('h') | KeyCode::Char('?') => app.toggle_help(),
+                KeyCode::Char('r') => app.toggle_format(),
                 KeyCode::Esc => {
                     if app.help_visible {
                         app.help_visible = false;
@@ -189,7 +202,11 @@ fn create_diff_content(app: &App) -> List<'static> {
             DiffType::Ignored => Color::DarkGray,
         };
 
-        let entry_text = format!("{}", entry);
+        let entry_text = if app.use_readable_format {
+            entry.format_readable()
+        } else {
+            format!("{}", entry)
+        };
         list_items.push(ListItem::new(Line::from(vec![
             Span::styled(entry_text, Style::default().fg(color)),
         ])));
@@ -201,10 +218,12 @@ fn create_diff_content(app: &App) -> List<'static> {
 }
 
 fn create_footer(app: &App) -> Paragraph<'static> {
+    let format_mode = if app.use_readable_format { "Readable (default)" } else { "Symbols" };
     let nav_info = format!(
-        "Entry {}/{} | Press j/k to navigate, h/? for help, q to quit",
+        "Entry {}/{} | Format: {} | j/k: navigate, r: toggle format, h/?: help, q: quit",
         if app.diff_result.entries.is_empty() { 0 } else { app.current_index + 1 },
-        app.diff_result.entries.len()
+        app.diff_result.entries.len(),
+        format_mode
     );
 
     let text = vec![
@@ -226,9 +245,18 @@ fn create_help_popup() -> Paragraph<'static> {
         Line::from("  j, Down Arrow: Move to next diff"),
         Line::from("  k, Up Arrow: Move to previous diff"),
         Line::from(""),
-        Line::from("Other Controls:"),
+        Line::from("Display Controls:"),
+        Line::from("  r: Toggle between readable (default) and symbols format"),
         Line::from("  h, ?: Toggle help"),
         Line::from("  q, Esc: Quit"),
+        Line::from(""),
+        Line::from(Span::styled("Diff Type Symbols:", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from("  + (ADDED): Property exists in target but not in source"),
+        Line::from("  - (REMOVED): Property exists in source but not in target"),
+        Line::from("  ~ (MODIFIED): Property exists in both but with different values"),
+        Line::from("  ! (ARRAY_ITEM_CHANGED): Array item has changed"),
+        Line::from("  * (ARRAY_REORDERED): Array elements are reordered"),
+        Line::from("  ? (IGNORED): Property was ignored based on configuration"),
         Line::from(""),
         Line::from("Note: Mouse operations are not supported"),
         Line::from("Press any key to close this help"),

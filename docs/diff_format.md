@@ -11,13 +11,13 @@ LEFT: path/to/left.json
 RIGHT: path/to/right.json
 TIMESTAMP: 2023-07-21T14:30:00Z
 
-# Diff entries
-+ $.new.property (L5:L8): "added value"
-- $.removed.property (L12): "removed value"
-~ $.modified.property (L3:L3): "old value" -> "new value"
-! $.array[2] (L15:L15): {"old": "value"} -> {"new": "value"}
-* $.unordered.array (L10:L10): [REORDERED]
-? $.ignored.property (L7:L7): [IGNORED]
+# Diff entries (readable format - default)
+[ADDED] $.new.property (L5:L8): "added value"
+[REMOVED] $.removed.property (L12): "removed value"
+[MODIFIED] $.modified.property (L3:L3): "old value" -> "new value"
+[ARRAY_ITEM_CHANGED] $.array[2] (L15:L15): {"old": "value"} -> {"new": "value"}
+[ARRAY_REORDERED] $.unordered.array (L10:L10): [REORDERED]
+[IGNORED] $.ignored.property (L7:L7): [IGNORED]
 ```
 
 ## Entry Types
@@ -45,13 +45,59 @@ Each diff entry includes line number information in the format `(L<left>:<right>
 ### Line Number Examples
 
 ```
-~ $.user.email (L5:L5): "john.doe@example.com" -> "john.smith@example.com"
-+ $.user.profile.timezone (L9:L13): "PST"
-- $.user.phone (L15): "555-1234"
-* $.users (L2:L2): [REORDERED]
+[MODIFIED] $.user.email (L5:L5): "john.doe@example.com" -> "john.smith@example.com"
+[ADDED] $.user.profile.timezone (L9:L13): "PST"
+[REMOVED] $.user.phone (L15): "555-1234"
+[ARRAY_REORDERED] $.users (L2:L2): [REORDERED]
 ```
 
 The line numbers help users quickly navigate to the specific content in their original JSON files, making it easier to understand and verify the changes.
+
+## Readable Format
+
+For better readability, the tool uses a readable text format by default instead of cryptic symbols. You can switch to compact symbols using the `--symbols` flag in CLI mode or by pressing `r` in interactive mode.
+
+### Symbol vs Readable Format Comparison
+
+**Symbol Format:**
+```
++ $.new.property (L5:L8): "added value"
+- $.removed.property (L12): "removed value"
+~ $.modified.property (L3:L3): "old value" -> "new value"
+! $.array[2] (L15:L15): {"old": "value"} -> {"new": "value"}
+* $.unordered.array (L10:L10): [REORDERED]
+? $.ignored.property (L7:L7): [IGNORED]
+```
+
+**Readable Format (default):**
+```
+[ADDED] $.new.property (L5:L8): "added value"
+[REMOVED] $.removed.property (L12): "removed value"
+[MODIFIED] $.modified.property (L3:L3): "old value" -> "new value"
+[ARRAY_ITEM_CHANGED] $.array[2] (L15:L15): {"old": "value"} -> {"new": "value"}
+[ARRAY_REORDERED] $.unordered.array (L10:L10): [REORDERED]
+[IGNORED] $.ignored.property (L7:L7): [IGNORED]
+```
+
+### Interactive Mode Features
+
+In interactive mode, you can:
+- Press `r` to toggle between readable (default) and symbol formats
+- Press `h` or `?` to see help with symbol explanations
+- View the current format mode in the footer (Format: Readable/Symbols)
+
+### CLI Usage
+
+```bash
+# Use readable format (default)
+json-diff file1.json file2.json
+
+# Use symbol format
+json-diff file1.json file2.json --symbols
+
+# Interactive mode with symbol format
+json-diff file1.json file2.json --interactive --symbols
+```
 
 ## Advanced Features
 
@@ -61,9 +107,9 @@ When arrays are marked as unordered, the tool can now show both the reordering a
 
 Example:
 ```
-* $.users (L2:L2): [REORDERED]
-~ $.users[0].settings.theme (L7:L7): "light" -> "dark"
-~ $.users[1].name (L5:L5): "Bob" -> "Robert"
+[ARRAY_REORDERED] $.users (L2:L2): [REORDERED]
+[MODIFIED] $.users[0].settings.theme (L7:L7): "light" -> "dark"
+[MODIFIED] $.users[1].name (L5:L5): "Bob" -> "Robert"
 ```
 
 ### Specific Array Item Differences
@@ -72,9 +118,9 @@ The tool can identify specific different items in arrays rather than marking the
 
 Example:
 ```
-~ $.items[1].value (L8:L8): "original" -> "modified"
-+ $.items[3].value (L12): "newly added"
-- $.items[4].value (L15): "removed"
+[MODIFIED] $.items[1].value (L8:L8): "original" -> "modified"
+[ADDED] $.items[3].value (L12): "newly added"
+[REMOVED] $.items[4].value (L15): "removed"
 ```
 
 ## Configuration Options
@@ -103,11 +149,11 @@ LEFT: user1.json
 RIGHT: user2.json
 TIMESTAMP: 2023-07-21T14:30:00Z
 
-+ $.address.zipcode (L8:L12): "10001"
-- $.phone.home (L15): "555-1234"
-~ $.name (L2:L2): "John Doe" -> "John Smith"
-! $.hobbies[1] (L10:L10): "swimming" -> "hiking"
-* $.friends (L18:L18): [REORDERED]
-~ $.friends[0].name (L20:L20): "Alice" -> "Alicia"
-? $.lastLogin (L25:L25): [IGNORED]
+[ADDED] $.address.zipcode (L8:L12): "10001"
+[REMOVED] $.phone.home (L15): "555-1234"
+[MODIFIED] $.name (L2:L2): "John Doe" -> "John Smith"
+[ARRAY_ITEM_CHANGED] $.hobbies[1] (L10:L10): "swimming" -> "hiking"
+[ARRAY_REORDERED] $.friends (L18:L18): [REORDERED]
+[MODIFIED] $.friends[0].name (L20:L20): "Alice" -> "Alicia"
+[IGNORED] $.lastLogin (L25:L25): [IGNORED]
 ```
