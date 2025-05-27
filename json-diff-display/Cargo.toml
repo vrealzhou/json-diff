@@ -11,3 +11,5 @@ json-diff-core = { path = "../json-diff-core" }
 ratatui = "0.24"
 crossterm = "0.27"
 anyhow = "1.0"
+syntect = "5.1"
+serde_json = "1.0"

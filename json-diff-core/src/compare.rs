@@ -84,6 +84,9 @@ pub fn compare_json_with_lines(
 
     compare_values_with_lines(left, right, "$", &mut entries, options, left_line_map, right_line_map)?;
 
+    // Sort entries by line number (based on left file's line numbers)
+    sort_entries_by_line_number(&mut entries);
+
     let result = DiffResult {
         left_file: None,
         right_file: None,
@@ -92,6 +95,20 @@ pub fn compare_json_with_lines(
     };
 
     Ok(result)
+}
+
+/// Sort diff entries by line number (based on left file's line numbers)
+/// Entries without line numbers are placed at the end
+fn sort_entries_by_line_number(entries: &mut Vec<DiffEntry>) {
+    entries.sort_by_key(|entry| {
+        // Use left_line as primary sort key, fall back to right_line if left_line is None
+        // Entries without any line numbers go to the end (using usize::MAX)
+        match (entry.left_line, entry.right_line) {
+            (Some(left_line), _) => left_line,
+            (None, Some(right_line)) => right_line,
+            (None, None) => usize::MAX,
+        }
+    });
 }
 
 /// Build a mapping from JSON paths to line numbers
