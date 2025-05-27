@@ -398,17 +398,18 @@ fn create_file_content(content: &[String], scroll: usize, title: &'static str, d
             Span::styled(format!("{:4} ", line_number), Style::default().fg(Color::DarkGray)),
         ];
 
-        // Check if this line has a diff and if it's the current diff
-        let (has_diff, is_current_diff) = check_diff_status(diff_result, line_number, is_left, current_diff_index);
+        // Check if this line has a diff and get its type
+        let (has_diff, is_current_diff, diff_type) = check_diff_status_with_type(diff_result, line_number, is_left, current_diff_index);
 
         if has_diff {
-            if is_current_diff {
-                // Highlight the current diff line with a bright, distinct color
-                spans.push(Span::styled(line.clone(), Style::default().bg(Color::Magenta).fg(Color::White).add_modifier(Modifier::BOLD)));
+            let bg_color = get_semantic_background_color(&diff_type, is_current_diff);
+            let fg_color = Color::White;
+            let style = if is_current_diff {
+                Style::default().bg(bg_color).fg(fg_color).add_modifier(Modifier::BOLD)
             } else {
-                // Highlight other diff lines with gray
-                spans.push(Span::styled(line.clone(), Style::default().bg(Color::DarkGray).fg(Color::White)));
-            }
+                Style::default().bg(bg_color).fg(fg_color)
+            };
+            spans.push(Span::styled(line.clone(), style));
         } else {
             // Apply basic JSON syntax highlighting
             spans.extend(highlight_json_line(line));
@@ -485,9 +486,12 @@ fn highlight_json_line(line: &str) -> Vec<Span<'static>> {
     spans
 }
 
-fn check_diff_status(diff_result: &DiffResult, line_number: usize, is_left: bool, current_diff_index: usize) -> (bool, bool) {
+
+
+fn check_diff_status_with_type(diff_result: &DiffResult, line_number: usize, is_left: bool, current_diff_index: usize) -> (bool, bool, Option<DiffType>) {
     let mut has_diff = false;
     let mut is_current_diff = false;
+    let mut diff_type = None;
 
     for (index, entry) in diff_result.entries.iter().enumerate() {
         let line_matches = if is_left {
@@ -498,6 +502,7 @@ fn check_diff_status(diff_result: &DiffResult, line_number: usize, is_left: bool
 
         if line_matches {
             has_diff = true;
+            diff_type = Some(entry.diff_type.clone());
             if index == current_diff_index {
                 is_current_diff = true;
             }
@@ -505,7 +510,62 @@ fn check_diff_status(diff_result: &DiffResult, line_number: usize, is_left: bool
         }
     }
 
-    (has_diff, is_current_diff)
+    (has_diff, is_current_diff, diff_type)
+}
+
+fn get_semantic_background_color(diff_type: &Option<DiffType>, is_current_diff: bool) -> Color {
+    match diff_type {
+        Some(DiffType::Added) => {
+            if is_current_diff {
+                Color::Green  // Bright green for focused added lines
+            } else {
+                Color::Rgb(0, 100, 0)  // Dark green for other added lines
+            }
+        }
+        Some(DiffType::Removed) => {
+            if is_current_diff {
+                Color::Red  // Bright red for focused removed lines
+            } else {
+                Color::Rgb(100, 0, 0)  // Dark red for other removed lines
+            }
+        }
+        Some(DiffType::Modified) => {
+            if is_current_diff {
+                Color::Yellow  // Bright yellow for focused modified lines
+            } else {
+                Color::Rgb(100, 100, 0)  // Dark yellow for other modified lines
+            }
+        }
+        Some(DiffType::ArrayItemChanged) => {
+            if is_current_diff {
+                Color::Cyan  // Bright cyan for focused array changes
+            } else {
+                Color::Rgb(0, 100, 100)  // Dark cyan for other array changes
+            }
+        }
+        Some(DiffType::ArrayReordered) => {
+            if is_current_diff {
+                Color::Magenta  // Bright magenta for focused array reordering
+            } else {
+                Color::Rgb(100, 0, 100)  // Dark magenta for other array reordering
+            }
+        }
+        Some(DiffType::Ignored) => {
+            if is_current_diff {
+                Color::Gray  // Gray for focused ignored lines
+            } else {
+                Color::DarkGray  // Dark gray for other ignored lines
+            }
+        }
+        None => {
+            // Fallback to the old behavior
+            if is_current_diff {
+                Color::Magenta
+            } else {
+                Color::DarkGray
+            }
+        }
+    }
 }
 
 fn create_split_footer(app: &App) -> Paragraph<'static> {
@@ -651,7 +711,12 @@ fn create_help_popup() -> Paragraph<'static> {
         Line::from(Span::styled("Split-Screen Features:", Style::default().add_modifier(Modifier::BOLD))),
         Line::from("  • JSON syntax highlighting"),
         Line::from("  • Line numbers"),
-        Line::from("  • Highlighted diff lines"),
+        Line::from("  • Semantic color highlighting:"),
+        Line::from("    - Green: Added lines"),
+        Line::from("    - Red: Removed lines"),
+        Line::from("    - Yellow: Modified lines"),
+        Line::from("    - Cyan: Array item changes"),
+        Line::from("    - Magenta: Array reordering"),
         Line::from("  • Side-by-side comparison"),
         Line::from(""),
         Line::from("Note: Mouse operations are not supported"),

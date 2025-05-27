@@ -76,9 +76,12 @@ The split-screen view provides a powerful side-by-side comparison experience:
 
 - **JSON Syntax Highlighting**: Keys, strings, numbers, and structural elements are color-coded
 - **Line Numbers**: Each line is numbered for easy reference
-- **Smart Diff Highlighting**:
-  - **Current focused diff**: Highlighted with bright magenta background and bold text
-  - **Other diff lines**: Highlighted with gray background
+- **Semantic Diff Highlighting**:
+  - **Added lines**: Green background (bright green for focused, dark green for others)
+  - **Removed lines**: Red background (bright red for focused, dark red for others)
+  - **Modified lines**: Yellow background (bright yellow for focused, dark yellow for others)
+  - **Array changes**: Cyan background (bright cyan for focused, dark cyan for others)
+  - **Array reordered**: Magenta background (bright magenta for focused, dark magenta for others)
   - **Normal lines**: JSON syntax highlighting
 - **Smart Navigation**: Use `n`/`N` to jump directly to diff locations in line number order
 - **Synchronized Scrolling**: Both files scroll together with `j`/`k` keys
@@ -89,12 +92,13 @@ The split-screen view provides a powerful side-by-side comparison experience:
 ```
 ┌Left File──────────────────┐ ┌Right File─────────────────┐
 │   1 {                     │ │   1 {                     │
-│   2   "name": "John Doe", │ │   2   "name": "Jane Smith"│ ← FOCUSED (magenta bg)
+│   2   "name": "John Doe", │ │   2   "name": "Jane Smith"│ ← FOCUSED (bright yellow bg)
 │   3   "age": 30,          │ │   3   "age": 30,          │
-│   4   "email": "john@..." │ │   4   "email": "jane@..." │ ← Other diff (gray bg)
-│   5 }                     │ │   5 }                     │
+│   4   "email": "john@..." │ │   4   "email": "jane@..." │ ← Other MODIFIED (dark yellow bg)
+│   5   "removed": "old",   │ │   5   "added": "new",     │ ← REMOVED (red) / ADDED (green)
+│   6 }                     │ │   6 }                     │
 └───────────────────────────┘ └───────────────────────────┘
-Footer: Diff 1/2 | Current: [MODIFIED] $.name | j/k: scroll, n/N: diff
+Footer: Diff 1/3 | Current: [MODIFIED] $.name | j/k: scroll, n/N: diff
 ```
 
 ## Testing
